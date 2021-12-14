@@ -61,7 +61,7 @@ def casher(output_dir='./data/'):
     options.add_argument(r"profile-directory=Profile 1")
     driver = webdriver.Chrome(r'./chromedriver.exe', chrome_options=options)
     time.sleep(2)
-    driver.get("https://hiveon.net/eth/workers?miner=0x275cf3edd7cd43e1e7bdf412227a0887b5e62257")
+    driver.get("https://hiveon.net/eth/workers?miner=0x0c11ed4f68ed21b51b6bff2b8de0660e721fed08")
     time.sleep(10)
     all_reading = driver.find_element_by_xpath("/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
     time.sleep(2)
