@@ -7,13 +7,10 @@ dataset/
 *.avi
 *.mp4
 *.mpeg4
-dataset/ARID/raw/data/
-dataset/HMDB51/raw/data/
-dataset/MK200/raw/data/train
-dataset/MK200/raw/data/val
-dataset/UCF101/raw/data/
-dataset/
 *.onnx
 *.pt
+*.spec
+build
+dist
 
 
