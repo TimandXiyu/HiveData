@@ -8,7 +8,8 @@ import re
 import pandas as pd
 from pathlib import Path
 import json as js
-
+from glob import glob
+import os
 
 def toLowerCase(string):
     return "".join(chr(ord(c) + 32) if 65 <= ord(c) <= 90 else c for c in string)
@@ -88,16 +89,37 @@ def casher(output_dir='./data/'):
 
                 parsed_reading[tgt_worker] += round(calibrate_rate(round(float(all_reading[worker + 3])), all_reading[worker + 6]))
 
-    parsed_reading = pd.DataFrame(parsed_reading, index=[f'{datetime.datetime.now().strftime("%H-%M")}'])
+    parsed_reading = pd.DataFrame(parsed_reading, index=[f'{datetime.datetime.now().strftime("%d:%H:%M")}'])
+
+    today = datetime.datetime.today()
+    tmr = today + datetime.timedelta(days=1)
+    now = datetime.datetime.now()
+    ref, mid, y_ref = get_ref_time(15)
 
     if not Path(output_dir).exists():
         Path(output_dir).mkdir()
-    if not Path(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv').exists():
-        parsed_reading.to_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv')
-    else:
-        prev_df = pd.read_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv', index_col=0)
-        prev_df = prev_df.append(parsed_reading)
-        prev_df.to_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv')
+
+    if now > ref:
+        if not Path(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv').exists():
+            parsed_reading.to_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv')
+        else:
+            prev_df = pd.read_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv', index_col=0)
+            prev_df = prev_df.append(parsed_reading)
+            prev_df.to_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv')
+    elif now < ref:
+        if not Path(output_dir + f'{today.strftime("%Y-%m-%d")}.csv').exists():
+            parsed_reading.to_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv')
+        else:
+            prev_df = pd.read_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv', index_col=0)
+            prev_df = prev_df.append(parsed_reading)
+            prev_df.to_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv')
+
+    # if not Path(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv').exists():
+    #     parsed_reading.to_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv')
+    # else:
+    #     prev_df = pd.read_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv', index_col=0)
+    #     prev_df = prev_df.append(parsed_reading)
+    #     prev_df.to_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv')
     time.sleep(5)
     driver.quit()
     time.sleep(5)
@@ -120,6 +142,33 @@ def calibrate_rate(hashrate, stale_rate):
         return int(hashrate)
     else:
         return int(hashrate)
+
+
+def sum_data(num_recent, dir_path):
+    dir_path = dir_path + r'/????-??-??.csv'
+    logs = glob(dir_path)
+    logs.sort(key=os.path.getmtime)
+    logs = logs[-num_recent:]
+    mean_list = []
+    all_log = []
+    for log in logs:
+        df_log = pd.read_csv(log, index_col=0)
+        mean = pd.DataFrame(df_log.mean(axis=0))
+        all_log.append(df_log)
+        mean.columns = [f'{log}-average']
+        mean_list.append(mean.T)
+    all_log = pd.concat(all_log, join='inner')
+    mean = pd.concat(mean_list, join='inner')
+    return mean
+
+
+def get_ref_time(ref_hour=15):
+    today = datetime.datetime.now()
+    one_day_delta = datetime.timedelta(days=1)
+    ref = datetime.datetime(today.year, today.month, today.day, ref_hour)
+    mid = datetime.datetime(today.year, today.month, today.day, 0)
+    yesterday_ref = ref - one_day_delta
+    return ref, mid, yesterday_ref
 
 
 if __name__ == "__main__":
