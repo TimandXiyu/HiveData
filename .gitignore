@@ -10,6 +10,7 @@ dataset/
 *.onnx
 *.pt
 *.spec
+*.exe
 build
 dist
 
