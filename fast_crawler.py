@@ -58,7 +58,7 @@ def casher(output_dir='./data/'):
     kill_chrome()
     logging.basicConfig(level=logging.NOTSET)
     options = webdriver.ChromeOptions()
-    options.add_argument(r"user-data-dir=C:\Users\Tim Wang\AppData\Local\Google\Chrome\User Data")
+    options.add_argument(r"user-data-dir=C:\Users\lewe\AppData\Local\Google\Chrome\User Data")
     options.add_argument(r"profile-directory=Profile 1")
     driver = webdriver.Chrome(r'./chromedriver.exe', chrome_options=options)
     time.sleep(2)
@@ -144,20 +144,24 @@ def calibrate_rate(hashrate, stale_rate):
         return int(hashrate)
 
 
-def sum_data(num_recent, dir_path):
+def sum_data(start, end, dir_path):
+    start = datetime.datetime(year=start[0], month=start[1], day=start[2])
+    end = datetime.datetime(year=end[0], month=end[1], day=end[2])
     dir_path = dir_path + r'/????-??-??.csv'
     logs = glob(dir_path)
     logs.sort(key=os.path.getmtime)
-    logs = logs[-num_recent:]
+    dates = [str(Path(x).stem).split('-') for x in logs]
+    dates = [datetime.datetime(year=int(x[0]), month=int(x[1]), day=int(x[2])) for x in dates]
+    targets = []
+    for i, date in enumerate(dates):
+        if start <= date <= end:
+            targets.append(logs[i])
     mean_list = []
-    all_log = []
-    for log in logs:
+    for log in targets:
         df_log = pd.read_csv(log, index_col=0)
         mean = pd.DataFrame(df_log.mean(axis=0))
-        all_log.append(df_log)
         mean.columns = [f'{log}-average']
         mean_list.append(mean.T)
-    all_log = pd.concat(all_log, join='inner')
     mean = pd.concat(mean_list, join='inner')
     return mean
 
@@ -172,4 +176,4 @@ def get_ref_time(ref_hour=15):
 
 
 if __name__ == "__main__":
-    casher()
+    sum_data((2021, 12, 16), (2021, 12, 18), './data')
