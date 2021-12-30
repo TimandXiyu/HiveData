@@ -1,5 +1,6 @@
 import logging
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 import time
 import psutil
 import json
@@ -56,63 +57,75 @@ def write_to_json(data):
 
 def casher(output_dir='./data/'):
     kill_chrome()
+    retry = 5
     logging.basicConfig(level=logging.NOTSET)
     options = webdriver.ChromeOptions()
-    options.add_argument(r"user-data-dir=C:\Users\lewe\AppData\Local\Google\Chrome\User Data")
+    options.add_argument(r"user-data-dir=C:\Users\monalaptop01\AppData\Local\Google\Chrome\User Data")
     options.add_argument(r"profile-directory=Profile 1")
+    options.add_argument("--start-maximized")
     driver = webdriver.Chrome(r'./chromedriver.exe', chrome_options=options)
     time.sleep(2)
     driver.get("https://hiveon.net/eth/workers?miner=0x0c11ed4f68ed21b51b6bff2b8de0660e721fed08")
     time.sleep(10)
-    all_reading = driver.find_element_by_xpath("/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
-    time.sleep(2)
-    driver.find_element_by_xpath("/html/body/div[1]/div[1]/div/section[3]/div/div/div[1]/div[1]/div/div/div/span[2]").click()
-    time.sleep(2)
-    all_reading += driver.find_element_by_xpath("/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
-    all_reading = [x for x in all_reading if x != 'MH/s']
-    all_reading = [x for x in all_reading if x != 'H/s']
+    while retry != 0:
+        try:
+            all_reading = driver.find_element_by_xpath("/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
+            time.sleep(2)
+            driver.find_element_by_xpath(
+                "/html/body/div[1]/div[1]/div/section[3]/div/div/div[1]/div[1]/div/div/div/span[2]").click()
+            time.sleep(2)
+            all_reading += driver.find_element_by_xpath(
+                "/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
+            all_reading = [x for x in all_reading if x != 'MH/s']
+            all_reading = [x for x in all_reading if x != 'H/s']
+            time.sleep(5)
+
+            retry = 0
+
+            parsed_reading = {}
+            for worker in range(0, len(all_reading), 10):
+                for tgt_worker in list(read_name_list().keys()):
+                    try:
+                        parsed_reading[tgt_worker] = parsed_reading[tgt_worker]
+                    except KeyError:
+                        parsed_reading[tgt_worker] = 0
+                    if re.search(toLowerCase(tgt_worker), toLowerCase(all_reading[worker])):
+                        parsed_reading[tgt_worker] += round(
+                            calibrate_rate(round(float(all_reading[worker + 3])), all_reading[worker + 6]))
+
+            parsed_reading = pd.DataFrame(parsed_reading, index=[f'{datetime.datetime.now().strftime("%d:%H:%M")}'])
+
+            today = datetime.datetime.today()
+            tmr = today + datetime.timedelta(days=1)
+            now = datetime.datetime.now()
+            ref, mid, y_ref = get_ref_time(15)
+
+            if not Path(output_dir).exists():
+                Path(output_dir).mkdir()
+
+            if now > ref:
+                if not Path(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv').exists():
+                    parsed_reading.to_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv')
+                else:
+                    prev_df = pd.read_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv', index_col=0)
+                    prev_df = prev_df.append(parsed_reading)
+                    prev_df.to_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv')
+            elif now < ref:
+                if not Path(output_dir + f'{today.strftime("%Y-%m-%d")}.csv').exists():
+                    parsed_reading.to_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv')
+                else:
+                    prev_df = pd.read_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv', index_col=0)
+                    prev_df = prev_df.append(parsed_reading)
+                    prev_df.to_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv')
+
+        except NoSuchElementException:
+            driver.refresh()
+            time.sleep(10)
+            retry -= 1
     time.sleep(5)
-
-    #  get today's income
-    with open('./data/history.json') as jsonfile:
-        income = js.load(jsonfile)
-        income = income[list(income.keys())[-1]][1]
-
-    parsed_reading = {}
-    for worker in range(0, len(all_reading), 10):
-        for tgt_worker in list(read_name_list().keys()):
-            try:
-                parsed_reading[tgt_worker] = parsed_reading[tgt_worker]
-            except KeyError:
-                parsed_reading[tgt_worker] = 0
-            if re.search(toLowerCase(tgt_worker), toLowerCase(all_reading[worker])):
-
-                parsed_reading[tgt_worker] += round(calibrate_rate(round(float(all_reading[worker + 3])), all_reading[worker + 6]))
-
-    parsed_reading = pd.DataFrame(parsed_reading, index=[f'{datetime.datetime.now().strftime("%d:%H:%M")}'])
-
-    today = datetime.datetime.today()
-    tmr = today + datetime.timedelta(days=1)
-    now = datetime.datetime.now()
-    ref, mid, y_ref = get_ref_time(15)
-
-    if not Path(output_dir).exists():
-        Path(output_dir).mkdir()
-
-    if now > ref:
-        if not Path(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv').exists():
-            parsed_reading.to_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv')
-        else:
-            prev_df = pd.read_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv', index_col=0)
-            prev_df = prev_df.append(parsed_reading)
-            prev_df.to_csv(output_dir + f'{tmr.strftime("%Y-%m-%d")}.csv')
-    elif now < ref:
-        if not Path(output_dir + f'{today.strftime("%Y-%m-%d")}.csv').exists():
-            parsed_reading.to_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv')
-        else:
-            prev_df = pd.read_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv', index_col=0)
-            prev_df = prev_df.append(parsed_reading)
-            prev_df.to_csv(output_dir + f'{today.strftime("%Y-%m-%d")}.csv')
+    driver.quit()
+    time.sleep(5)
+    kill_chrome()
 
     # if not Path(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv').exists():
     #     parsed_reading.to_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv')
@@ -120,10 +133,6 @@ def casher(output_dir='./data/'):
     #     prev_df = pd.read_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv', index_col=0)
     #     prev_df = prev_df.append(parsed_reading)
     #     prev_df.to_csv(output_dir + f'{datetime.datetime.now().strftime("%Y-%m-%d")}.csv')
-    time.sleep(5)
-    driver.quit()
-    time.sleep(5)
-    kill_chrome()
 
 
 def calibrate_rate(hashrate, stale_rate):
@@ -163,6 +172,8 @@ def sum_data(start, end, dir_path):
         mean.columns = [f'{log}-average']
         mean_list.append(mean.T)
     mean = pd.concat(mean_list, join='inner')
+    mean = mean.round(0)
+    mean.to_csv('./data/temp.csv')
     return mean
 
 
@@ -175,5 +186,10 @@ def get_ref_time(ref_hour=15):
     return ref, mid, yesterday_ref
 
 
+def income_split(x, y, income):
+    return x / (x + y) * income, income - x / (x + y) * income
+
 if __name__ == "__main__":
-    sum_data((2021, 12, 16), (2021, 12, 18), './data')
+    # sum_data((2021, 12, 23), (2021, 12, 26), './data')
+    print(income_split(0.0958, 0.078, 4293.07))
+    # casher('/data')
