@@ -71,11 +71,11 @@ def casher(output_dir='./data/'):
         try:
             all_reading = driver.find_element_by_xpath("/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
             time.sleep(2)
-            driver.find_element_by_xpath(
-                "/html/body/div[1]/div[1]/div/section[3]/div/div/div[1]/div[1]/div/div/div/span[2]").click()
-            time.sleep(2)
-            all_reading += driver.find_element_by_xpath(
-                "/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
+            # driver.find_element_by_xpath(
+            #     "/html/body/div[1]/div[1]/div/section[3]/div/div/div[1]/div[1]/div/div/div/span[2]").click()
+            # time.sleep(2)
+            # all_reading += driver.find_element_by_xpath(
+            #     "/html/body/div[1]/div[1]/div/section[3]/div/div/div[2]").text.split('\n')[8:]
             all_reading = [x for x in all_reading if x != 'MH/s']
             all_reading = [x for x in all_reading if x != 'H/s']
             time.sleep(5)
@@ -190,6 +190,12 @@ def income_split(x, y, income):
     return x / (x + y) * income, income - x / (x + y) * income
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # sum_data((2022, 1, 1), (2022, 1, 3), './data')
     print(income_split(0.09126, 0.08724, 4194.38))
     # casher('/data')
+=======
+    # sum_data((2021, 12, 19), (2021, 12, 22), './data')
+    # print(income_split(0.09749, 0.09711, 4573.32))
+    casher()
+>>>>>>> 0a7aeee47722998f3c824da0391d7254d3a8c9df
