@@ -190,6 +190,6 @@ def income_split(x, y, income):
     return x / (x + y) * income, income - x / (x + y) * income
 
 if __name__ == "__main__":
-    # sum_data((2021, 12, 30), (2022, 1, 1), './data')
-    print(income_split(0.09071, 0.09174, 4133.25))
+    # sum_data((2022, 1, 1), (2022, 1, 3), './data')
+    print(income_split(0.09126, 0.08724, 4194.38))
     # casher('/data')
