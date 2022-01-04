@@ -1,63 +1,21 @@
 import logging
 from selenium import webdriver
 import time
-import psutil
-import json
 import datetime
 import re
+import os
 import pandas as pd
 from pathlib import Path
 import json as js
+from utils import toLowerCase, kill_chrome, read_name_list, save_today_record, write_to_json, calibrate_rate
 
 
-def toLowerCase(string):
-    return "".join(chr(ord(c) + 32) if 65 <= ord(c) <= 90 else c for c in string)
-
-
-def kill_chrome():
-    for proc in psutil.process_iter():
-        if "chrome" in proc.name():
-            proc.kill()
-
-
-def read_name_list():
-    with open('worker_keywords.json') as json_file:
-        name_list = json.load(json_file)
-        return name_list
-
-
-def save_today_record(today, prev):
-    today_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
-    last_day = prev[list(prev.keys())[-1]]
-    prev[today_time] = str(today) + f'-{today - float(last_day.split("-")[0])}'
-    with open('daily_records.json', 'w') as fp:
-        json.dump(prev, fp)
-
-
-def write_to_json(data):
-    json = Path('./data/history.json')
-    cur_time = f'{datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}'
-    data = float(data)
-
-    if not json.exists():
-        with open(json, 'w') as jsonfile:
-            js.dump({cur_time: [data, data]}, jsonfile)
-    else:
-        with open(json) as jsonfile:
-            prev_content = js.load(jsonfile)
-            if float(prev_content[list(prev_content.keys())[-1]][0]) < 0.1:
-                prev_content[cur_time] = [data, data - float(prev_content[list(prev_content.keys())[-1]][0])]
-            else:
-                prev_content[cur_time] = [data, data]
-        with open(json, 'w') as jsonfile:
-            js.dump(prev_content, jsonfile)
-
-
-def casher(output_dir='./data/'):
+def daily_logger(output_dir='./data/'):
     kill_chrome()
     logging.basicConfig(level=logging.NOTSET)
     options = webdriver.ChromeOptions()
-    options.add_argument(r"user-data-dir=C:\Users\Tim Wang\AppData\Local\Google\Chrome\User Data")
+    # options.add_argument(r"user-data-dir=C:\Users\Tim Wang\AppData\Local\Google\Chrome\User Data")
+    options.add_argument(f"{os.getenv('APPDATA')}\\Local\\Google\\Chrome\\User Data")
     options.add_argument(r"profile-directory=Profile 1")
     driver = webdriver.Chrome(r'./chromedriver.exe', chrome_options=options)
     time.sleep(2)
@@ -107,23 +65,5 @@ def casher(output_dir='./data/'):
     kill_chrome()
 
 
-def calibrate_rate(hashrate, stale_rate):
-    stale_rate = float(stale_rate[:-1])
-    if stale_rate > 4.1:
-        delta = (stale_rate - 4) / 100 * 5
-        if delta >= 0.1:
-            return int(hashrate * 0.9)
-        hashrate -= hashrate * delta
-        return int(hashrate)
-    elif stale_rate < 2.3:
-        delta = (2.3 - stale_rate) * 3.5 / 100
-        if delta > 0.5:
-            return int(hashrate * 1.05)
-        hashrate += hashrate * delta
-        return int(hashrate)
-    else:
-        return int(hashrate)
-
-
 if __name__ == "__main__":
-    casher()
+    daily_logger()
