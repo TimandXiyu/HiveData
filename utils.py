@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 import os
 from glob import glob
 import logging
+import numpy as np
 
 
 def toLowerCase(string):
@@ -51,7 +52,7 @@ def write_to_json(data):
             else:
                 prev_content[cur_time] = [data, data]
         with open(json, 'w') as jsonfile:
-            js.dump(prev_content, jsonfile)
+            js.dump(prev_content, jsonfile, indent=0)
 
 
 def calibrate_rate(hashrate, stale_rate):
@@ -108,6 +109,13 @@ def income_split(x, y, income):
     return x / (x + y) * income, income - x / (x + y) * income
 
 
+def income_split_2(x, y):
+    percentages = []
+    for i, total_income in enumerate(y):
+        percentages.append(total_income * np.array(x[i]) / np.sum(np.array(x[i])))
+    return percentages
+
+
 def send_email(recv, miner):
     mail_host = 'smtp.163.com'
     mail_user = 'CaptainPoolAdmin'
@@ -153,25 +161,22 @@ def read_reminder():
 
 def read_codebook():
     with open('./email codebook.json') as jsfile:
-        return  json.load(jsfile)
+        return json.load(jsfile)
+
+
+def random_income(income_sum, days=2):
+    split_anchor = 1 / days
+    random_split = np.random.uniform(high=split_anchor * 1.05, low=split_anchor * 0.95, size=days)
+    random_split *= income_sum
+    random_split[-1] = income_sum - np.sum(random_split[:-1])
+    return random_split
+
 
 
 if __name__ == "__main__":
-    tgt_miner = read_codebook()
-    prev_state = read_reminder()
-    offline_miner = {}
-    prev_state_ = prev_state.copy()
-    for prev_off_miner in (prev_state.keys()):
-        if prev_off_miner not in (offline_miner.keys()):
-            del prev_state_[prev_off_miner]
-    prev_state = prev_state_
-    for off_miner in list(offline_miner.keys()):
-        try:
-            if prev_state[off_miner] > 0:
-                prev_state[off_miner] -= 1
-                send_email(recv=[tgt_miner[off_miner][0]], miner=offline_miner[off_miner])
-            elif prev_state[off_miner] == -1:
-                send_email(recv=[tgt_miner[off_miner][0]], miner=offline_miner[off_miner])
-        except KeyError:
-            prev_state[off_miner] = tgt_miner[off_miner][1]
-    write_reminder(prev_state)
+    sum_data([2022, 3, 31], [2022, 4, 2], './data')
+    # incomes = random_income(0.178, days=2)
+    # print(incomes)
+    # pass
+    # print(income_split_2([[0.07821, 0.07529], [0.07542, 0.06847], [0.07556, 0.08213], [0.08861, 0.08938]], [2908, 2799, 3337, 3763]))
+
