@@ -174,9 +174,9 @@ def random_income(income_sum, days=2):
 
 
 if __name__ == "__main__":
-    sum_data([2022, 3, 31], [2022, 4, 2], './data')
-    # incomes = random_income(0.178, days=2)
+    # sum_data([2022, 4, 3], [2022, 4, 7], './data')
+    # incomes = random_income(0.1433, days=2)
     # print(incomes)
     # pass
-    # print(income_split_2([[0.07821, 0.07529], [0.07542, 0.06847], [0.07556, 0.08213], [0.08861, 0.08938]], [2908, 2799, 3337, 3763]))
+    print(income_split_2([[0.07625, 0.07744], [0.08341, 0.08062]], [3379, 3281]))
 
